@@ -14,6 +14,7 @@ foreach ($serverName in $serverNames) {
     $rdpMembers = Invoke-Command -ComputerName $serverName -ScriptBlock {Get-LocalGroupMember -Group "Remote Desktop Users"} | Select-Object -ExpandProperty Name
 
     # Output the lists of members
+    Write-Host " "
     Write-Host "Server: $serverName"
     Write-Host "Administrators group members:"
     Write-Host $adminMembers
