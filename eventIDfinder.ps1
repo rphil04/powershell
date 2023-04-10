@@ -15,6 +15,9 @@ The ID of the event to search for in the specified log.
 The name of the log to search for the specified event ID.
 #>
 
+#Load RSAT
+Import-Module ActiveDirectory
+
 # Clear the screen
 Clear-Host
 
