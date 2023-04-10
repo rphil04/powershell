@@ -1,3 +1,29 @@
+<#
+.SYNOPSIS
+This script retrieves events from a specified Windows event log on a remote computer based on a specified event ID, and outputs the results to the console.
+
+.DESCRIPTION
+This script prompts the user to enter the name of a remote computer, the event ID to search for, and the name of the log to search in. It then retrieves events from the specified log on the remote computer that match the specified event ID, and outputs information about each event to the console. If no events are found, a message is output to the console indicating that.
+
+.PARAMETER ComputerName
+The name of the remote computer to retrieve events from.
+
+.PARAMETER EventID
+The ID of the event to search for in the specified log.
+
+.PARAMETER LogName
+The name of the log to search for the specified event ID.
+
+.NOTES
+Author: [Your Name]
+Date: [Date]
+Version: 1.0
+
+#>
+
+# Clear the screen
+Clear-Host
+
 # Prompt the user to enter the hostname of the remote computer
 $computerName = Read-Host "Enter the name of the remote computer"
 
@@ -6,6 +32,9 @@ $eventID = Read-Host "Enter the event ID to search for"
 
 # Prompt the user to enter the name of the log to search in
 $logName = Read-Host "Enter the name of the log to search in"
+
+# Output a prompt indicating that information is being gathered
+Write-Host "Please wait... gathering information"
 
 try {
     # Retrieve events from the specified log on the remote computer
