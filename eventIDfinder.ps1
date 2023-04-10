@@ -1,9 +1,13 @@
 <#
 .SYNOPSIS
-This script retrieves events from a specified Windows event log on a remote computer based on a specified event ID, and outputs the results to the console.
+This script retrieves events from a specified Windows event log on a remote computer based on a 
+specified event ID, and outputs the results to the console.
 
 .DESCRIPTION
-This script prompts the user to enter the name of a remote computer, the event ID to search for, and the name of the log to search in. It then retrieves events from the specified log on the remote computer that match the specified event ID, and outputs information about each event to the console. If no events are found, a message is output to the console indicating that.
+This script prompts the user to enter the name of a remote computer, the event ID to search for, 
+and the name of the log to search in. It then retrieves events from the specified log on the 
+remote computer that match the specified event ID, and outputs information about each event to 
+the console. If no events are found, a message is output to the console indicating that.
 
 .PARAMETER ComputerName
 The name of the remote computer to retrieve events from.
