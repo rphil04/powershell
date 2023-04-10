@@ -3,7 +3,7 @@ $eventID = "SPECIFICEVENTID"
 
 $found = $false
 
-$events = Get-WinEvent -ComputerName $computerName -FilterHashtable @{LogName='System';ID=$eventID} -MaxEvents 10 | Select-Object -Property TimeCreated,Message
+$events = Get-WinEvent -ComputerName $computerName -FilterHashtable @{LogName='Application';ID=$eventID} -MaxEvents 10 | Select-Object -Property TimeCreated,Message
 
 foreach ($event in $events) {
     $found = $true
