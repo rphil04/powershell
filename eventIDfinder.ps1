@@ -13,12 +13,6 @@ The ID of the event to search for in the specified log.
 
 .PARAMETER LogName
 The name of the log to search for the specified event ID.
-
-.NOTES
-Author: [Your Name]
-Date: [Date]
-Version: 1.0
-
 #>
 
 # Clear the screen
@@ -34,6 +28,7 @@ $eventID = Read-Host "Enter the event ID to search for"
 $logName = Read-Host "Enter the name of the log to search in"
 
 # Output a prompt indicating that information is being gathered
+Write-Host " "
 Write-Host "Please wait... gathering information"
 
 try {
