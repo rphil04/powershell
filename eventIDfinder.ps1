@@ -1,23 +1,16 @@
 $computerName = "REMOTECOMPUTERNAME"
-$computerID = "SPECIFICCOMPUTERID"
+$eventID = "SPECIFICEVENTID"
 
 $found = $false
 
-$computers = Get-ADComputer -Filter {OperatingSystem -like "*Windows*"} -Property Name | Select-Object -ExpandProperty Name
+$events = Get-WinEvent -ComputerName $computerName -FilterHashtable @{LogName='System';ID=$eventID} -MaxEvents 10 | Select-Object -Property TimeCreated,Message
 
-foreach ($computer in $computers) {
-    if ($computer -eq $computerName) {
-        $found = $true
-        $computerInfo = Get-WmiObject Win32_ComputerSystem -ComputerName $computer | Select-Object -ExpandProperty UserName
-        if ($computerInfo -like "*$computerID*") {
-            Write-Host "Computer ID $computerID found on $computerName"
-        } else {
-            Write-Host "Computer ID $computerID not found on $computerName"
-        }
-        break
-    }
+foreach ($event in $events) {
+    $found = $true
+    Write-Host "Event ID $eventID found on $computerName at $($event.TimeCreated):"
+    Write-Host $event.Message
 }
 
 if (!$found) {
-    Write-Host "Computer $computerName not found"
+    Write-Host "Event ID $eventID not found on $computerName"
 }
