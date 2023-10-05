@@ -28,7 +28,7 @@ foreach ($server in $servers) {
 
     # Skip servers that are offline
     if (!(Test-Connection $server -Count 1 -Quiet)) {
-        Write-Host "$server: Offline"
+        Write-Host "${server}: Offline"
         continue
     }
 
@@ -36,8 +36,8 @@ foreach ($server in $servers) {
     $serverGroupMembers = Invoke-Command -ComputerName $server -ScriptBlock { Get-LocalGroupMember -Group $using:serverGroup }
 
     # Check if the AD group is already a member of the local group
-    if ($serverGroupMembers.Name -contains "SFI\$activeDirectoryGroup") {
-        Write-Host "$server: $activeDirectoryGroup is already a member of $serverGroup"
+    if ($serverGroupMembers.Name -contains "SFI\${activeDirectoryGroup}") {
+        Write-Host "${server}: ${activeDirectoryGroup} is already a member of ${serverGroup}"
         continue
     }
 
@@ -66,7 +66,7 @@ foreach ($server in $servers) {
     $newServerGroup = Invoke-Command -ComputerName $server -ScriptBlock { Get-LocalGroupMember -Group $using:serverGroup }
 
     # Display the updated group membership for the local group
-    if ($newServerGroup.Name -contains "SFI\$activeDirectoryGroup") {
+    if ($newServerGroup.Name -contains "SFI\${activeDirectoryGroup}") {
         Write-Host ""
         Write-Host "Process Completed Successfully!"
         Write-Host ""
