@@ -13,10 +13,27 @@ $serverSearch = Read-Host "Enter the server pattern to search for/update"
 # Get the list of servers that match the search pattern
 $servers = Get-ADComputer -Filter "Name -like '*$serverSearch*'" | Select-Object -ExpandProperty Name
 
+# Get the list of members currently in the local group on each target server
+$localGroupMembers = @{}
+foreach ($server in $servers) {
+    $localGroupMembers[$server] = Invoke-Command -ComputerName $server -ScriptBlock {
+        param($group)
+        Get-LocalGroupMember -Group $group
+    } -ArgumentList $serverGroup
+}
+
+# Display current group members on target systems
+foreach ($server in $servers) {
+    Write-Host "Current Group Members on $server:" -ForegroundColor DarkBlue -BackgroundColor Yellow
+    Write-Host "$($localGroupMembers[$server])"
+    Write-Host ""
+}
+
+# Perform changes on target systems
 foreach ($server in $servers) {
     # Check if server is online
-    if(!(Test-Connection $server -Count 1 -Quiet)){
-        Write-Host "$($server): Offline"
+    if (!(Test-Connection $server -Count 1 -Quiet)) {
+        Write-Host "$($server): Offline" -ForegroundColor Red
         Continue
     }
 
@@ -26,14 +43,14 @@ foreach ($server in $servers) {
         try {
             # Check if the AD group is already a member of the local group on the current server
             $serverGroupMembers = Get-LocalGroupMember -Group $targetGroup
-            if($serverGroupMembers.Name -contains $adGroup){
-                Write-Host "$env:COMPUTERNAME: $adGroup is already a member of $targetGroup"
+            if ($serverGroupMembers.Name -contains $adGroup) {
+                Write-Host "$env:COMPUTERNAME: $adGroup is already a member of $targetGroup" -ForegroundColor Yellow
             } else {
                 Add-LocalGroupMember -Group $targetGroup -Member $adGroup -ErrorAction Stop
-                Write-Host "Group added successfully to $targetGroup on $($env:COMPUTERNAME)"
+                Write-Host "Group added successfully to $targetGroup on $($env:COMPUTERNAME)" -ForegroundColor Green
             }
         } catch {
-            Write-Host "Failed to add group to $targetGroup on $($env:COMPUTERNAME): $($_.Exception.Message)"
+            Write-Host "Failed to add group to $targetGroup on $($env:COMPUTERNAME): $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 
