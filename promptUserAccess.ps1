@@ -14,7 +14,13 @@ $serverSearch = Read-Host "Enter the server pattern to search for/update"
 $servers = Get-ADComputer -Filter "Name -like '*$serverSearch*'" | Select-Object -ExpandProperty Name
 
 # Get the list of members currently in the local group
-$serverGroupMembers = Get-LocalGroupMember -Group $serverGroup
+$localGroupMembers = @{}
+foreach ($server in $servers) {
+    $localGroupMembers[$server] = Invoke-Command -ComputerName $server -ScriptBlock {
+        param($group)
+        Get-LocalGroupMember -Group $group
+    } -ArgumentList $serverGroup
+}
 
 # Display current group members
 Write-Host "Current Group Members:" -ForegroundColor DarkBlue -BackgroundColor Yellow
@@ -41,7 +47,7 @@ foreach ($server in $servers) {
     }
 
     # Get the list of members currently in the local group on the current server
-    $serverGroupMembers = Get-LocalGroupMember -Group $serverGroup -ComputerName $server
+    $serverGroupMembers = Get-LocalGroupMember -Group $serverGroup
 
     # Check if the AD group is already a member of the local group on the current server
     if($serverGroupMembers.Name -contains "SFI\$activeDirectoryGroup"){
@@ -56,14 +62,14 @@ foreach ($server in $servers) {
 
     # Add the AD group to the local server group on the current server
     try {
-        Add-LocalGroupMember -Group $serverGroup -Member "SFI\$activeDirectoryGroup" -ComputerName $server -ErrorAction Stop
+        Add-LocalGroupMember -Group $serverGroup -Member "SFI\$activeDirectoryGroup" -ErrorAction Stop
         Write-Host "Group added successfully to $serverGroup on $($server)"
     } catch {
         Write-Host "Failed to add group to $serverGroup on $($server): $($_.Exception.Message)"
     }
 
     # Get the updated list of group members on the current server
-    $newServerGroup = Get-LocalGroupMember -Group $serverGroup -ComputerName $server
+    $newServerGroup = Get-LocalGroupMember -Group $serverGroup
 
     # Display the updated list of group members on the current server
     Write-Host "New Group Members: $($newServerGroup)"
