@@ -24,7 +24,7 @@ foreach ($server in $servers) {
 
 # Display current group members on target systems
 foreach ($server in $servers) {
-    Write-Host "Current Group Members on $server:" -ForegroundColor DarkBlue -BackgroundColor Yellow
+    Write-Host "Current Group Members on $server" -ForegroundColor DarkBlue -BackgroundColor Yellow
     Write-Host "$($localGroupMembers[$server])"
     Write-Host ""
 }
