@@ -64,10 +64,10 @@ foreach ($server in $servers) {
                 Write-Host "$env:COMPUTERNAME: $adGroup is already a member of $targetGroup" -ForegroundColor Yellow
             } else {
                 Add-LocalGroupMember -Group $targetGroup -Member $adGroup -ErrorAction Stop
-                Write-Host "Group added successfully to $targetGroup on $($env:COMPUTERNAME)" -ForegroundColor Green
+                Write-Host "$activeDirectoryGroup added successfully to $targetGroup on $($env:COMPUTERNAME)" -ForegroundColor Green
             }
         } catch {
-            Write-Host "Failed to add group to $targetGroup on $($env:COMPUTERNAME): $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Failed to add $activeDirectoryGroup to $targetGroup on $($env:COMPUTERNAME): $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 
