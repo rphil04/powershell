@@ -1,3 +1,20 @@
+<#
+.SYNOPSIS
+Script to add an Active Directory group to local groups on specified servers.
+
+.DESCRIPTION
+This script prompts for an Active Directory group and a local group, then searches for servers based on a pattern provided by the user. It adds the specified Active Directory group to the local group on each target server, displaying current group members and performing necessary updates.
+
+.AUTHOR
+IamAuthor
+
+.VERSION
+1.0
+
+.NOTES
+Run this script from your favorite ISE that can use PowerShell. Follow the prompts carefully.
+#>
+
 # Import Active Directory module
 Import-Module ActiveDirectory
 
