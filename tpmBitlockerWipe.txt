@@ -1,0 +1,13 @@
+Enable Bitlocker on the drives. You can do this remotely from Powershell:
+
+Enable-BitLocker -MountPoint "C:" -EncryptionMethod "AES256" -FullEncryption -SkipHardwareTest
+
+After you have Bitlocker running and the time comes where you need to make the drives unusable you just need to rotate TPM. Save this as a .PS1 script that you run:
+
+Initialize-Tpm -AllowClear $true Restart-Computer -Force
+
+This process will only take a second and then reboot the server automatically. The server will be inaccessible. Destroy the decryption key provided to you after setting up Bitlocker and you’re good to go.
+
+No need to wipe the drives, they’re encrypted and everyone is locked out as long as you’ve destroyed the decryption key.
+
+Fire up a new test server (VM, EC2 instance, etc) that you can destroy and test it out to understand your process. Do not test this on any system you care about because it will render the system unusable.
