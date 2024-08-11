@@ -4,7 +4,7 @@ Network Device Scanner
 ===================================================
 Author: Noytou
 Date: 2024-10-06
-Version: 1.0
+Version: 1.1
 
 Description:
 ------------
@@ -18,7 +18,7 @@ Usage:
 ------
 - Customize the IP range according to your network configuration.
 - Run the script with appropriate permissions.
-- View the scan results in the C:\scans directory.
+- View the scan results in the C:\scripts\scans directory.
 
 IP Range:
 ---------
@@ -27,18 +27,18 @@ IP Range:
 
 Output:
 -------
-- The results are saved to C:\scans\previous_scan.json.
+- The results are saved to C:\scripts\scans\previous_scan.json.
 
 ===================================================
 #>
 
 # Directory and file to store previous scan results
-$scanDirectory = "C:\scans"
+$scanDirectory = "C:\scripts\scans"
 $previousScanFile = Join-Path $scanDirectory "previous_scan.json"
 
 # Ensure the scan directory exists
 if (-not (Test-Path $scanDirectory)) {
-    New-Item -Path $scanDirectory -ItemType Directory
+    New-Item -Path $scanDirectory -ItemType Directory | Out-Null
 }
 
 function Scan-Network {
@@ -88,8 +88,8 @@ function Compare-Scans {
         [array]$currentScan
     )
     
-    $previousIPs = $previousScan.IP
-    $currentIPs = $currentScan.IP
+    $previousIPs = $previousScan | ForEach-Object { $_.IP }
+    $currentIPs = $currentScan | ForEach-Object { $_.IP }
     
     $newDevices = $currentScan | Where-Object { $_.IP -notin $previousIPs }
     $removedDevices = $previousScan | Where-Object { $_.IP -notin $currentIPs }
@@ -106,7 +106,7 @@ function Display-Devices {
         [string]$label
     )
     
-    Write-Host -ForegroundColor Cyan "`n$label:"
+    Write-Host -ForegroundColor Cyan "`n$label"
     foreach ($device in $devices) {
         Write-Host "IP: $($device.IP), MAC: $($device.MAC), Hostname: $($device.Hostname)"
     }
