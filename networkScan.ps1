@@ -1,129 +1,70 @@
-<#
-===================================================
-Network Device Scanner
-===================================================
-Author: Noytou
-Date: 2024-10-06
-Version: 1.1
+# Define file paths
+$previousScanFile = "C:\scripts\scans\previous_scan.txt"
+$currentScanFile = "C:\scripts\scans\current_scan.txt"
+$newDevicesFile = "C:\scripts\scans\new_devices.txt"
 
-Description:
-------------
-This PowerShell script scans the internal network to identify connected devices,
-including their IP addresses, MAC addresses, and hostnames (if available).
-The script compares the current scan results with the previous scan to
-identify new or removed devices. The results are stored in a specified
-directory for future analysis.
-
-Usage:
-------
-- Customize the IP range according to your network configuration.
-- Run the script with appropriate permissions.
-- View the scan results in the C:\scripts\scans directory.
-
-IP Range:
----------
-- The IP range should be set according to your network.
-  Example for 192.168.0.1 router: "192.168.0.1/24"
-
-Output:
--------
-- The results are saved to C:\scripts\scans\previous_scan.json.
-
-===================================================
-#>
-
-# Directory and file to store previous scan results
-$scanDirectory = "C:\scripts\scans"
-$previousScanFile = Join-Path $scanDirectory "previous_scan.json"
-
-# Ensure the scan directory exists
-if (-not (Test-Path $scanDirectory)) {
-    New-Item -Path $scanDirectory -ItemType Directory | Out-Null
-}
-
-function Scan-Network {
-    param (
-        [string]$ipRange
-    )
-    
-    # Run ARP scan to get MAC addresses and IP addresses
-    $arpResults = arp -a | ForEach-Object {
-        $line = $_
-        if ($line -match "^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+([a-f0-9:]+)\s+\w+") {
-            $ip = $matches[1]
-            $mac = $matches[2]
-            $hostname = (Resolve-DnsName -Name $ip -ErrorAction SilentlyContinue).NameHost
-            if (-not $hostname) {
-                $hostname = "Unknown"
+# Perform network scan
+function Get-NetworkDevices {
+    $devices = @()
+    $subnet = "192.168.1"  # Replace with your subnet
+    1..254 | ForEach-Object {
+        $ip = "$subnet.$_"
+        if (Test-Connection -ComputerName $ip -Count 1 -Quiet) {
+            $hostname = "N/A"
+            try {
+                $hostname = [System.Net.Dns]::GetHostEntry($ip).HostName
+            } catch {
+                # Handle exception (e.g., log the error or continue)
             }
-            [PSCustomObject]@{
-                IP       = $ip
-                MAC      = $mac
+            $mac = (Get-WmiObject -Query "SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = 'TRUE'" |
+                    Where-Object { $_.IPAddress -contains $ip } |
+                    ForEach-Object { $_.MACAddress } |
+                    Out-String).Trim()
+            $devices += [PSCustomObject]@{
+                IPAddress = $ip
+                MACAddress = $mac
                 Hostname = $hostname
             }
         }
     }
-    
-    return $arpResults
+    $devices
 }
 
-function Load-PreviousScan {
-    if (Test-Path $previousScanFile) {
-        return Get-Content $previousScanFile | ConvertFrom-Json
-    }
-    return @()
-}
-
-function Save-CurrentScan {
+# Save current scan
+function Save-Scan {
     param (
-        [array]$currentScan
+        [string]$filePath,
+        [array]$devices
     )
-    
-    $currentScan | ConvertTo-Json | Set-Content -Path $previousScanFile
+    $devices | Export-Csv -Path $filePath -NoTypeInformation
 }
 
+# Compare scans
 function Compare-Scans {
     param (
-        [array]$previousScan,
-        [array]$currentScan
+        [string]$previousFilePath,
+        [string]$currentFilePath,
+        [string]$newDevicesFilePath
     )
-    
-    $previousIPs = $previousScan | ForEach-Object { $_.IP }
-    $currentIPs = $currentScan | ForEach-Object { $_.IP }
-    
-    $newDevices = $currentScan | Where-Object { $_.IP -notin $previousIPs }
-    $removedDevices = $previousScan | Where-Object { $_.IP -notin $currentIPs }
-    
-    return @{
-        NewDevices     = $newDevices
-        RemovedDevices = $removedDevices
+    if (Test-Path $previousFilePath) {
+        $previousScan = Import-Csv -Path $previousFilePath
+    } else {
+        $previousScan = @()
     }
+    $currentScan = Import-Csv -Path $currentFilePath
+
+    $newDevices = $currentScan | Where-Object {
+        $previousScan -notcontains $_
+    }
+    $newDevices | Export-Csv -Path $newDevicesFilePath -NoTypeInformation
 }
 
-function Display-Devices {
-    param (
-        [array]$devices,
-        [string]$label
-    )
-    
-    Write-Host -ForegroundColor Cyan "`n$label"
-    foreach ($device in $devices) {
-        Write-Host "IP: $($device.IP), MAC: $($device.MAC), Hostname: $($device.Hostname)"
-    }
-}
+# Main execution
+$currentDevices = Get-NetworkDevices
+Save-Scan -filePath $currentScanFile -devices $currentDevices
+Compare-Scans -previousFilePath $previousScanFile -currentFilePath $currentScanFile -newDevicesFilePath $newDevicesFile
 
-# Main script execution
-$ipRange = "192.168.0.1/24"
-
-Write-Host "Scanning network..."
-$currentScan = Scan-Network -ipRange $ipRange
-
-$previousScan = Load-PreviousScan
-$scanComparison = Compare-Scans -previousScan $previousScan -currentScan $currentScan
-
-Display-Devices -devices $currentScan -label "Current Devices"
-Display-Devices -devices $scanComparison.NewDevices -label "New Devices"
-Display-Devices -devices $scanComparison.RemovedDevices -label "Removed Devices"
-
-Save-CurrentScan -currentScan $currentScan
-Write-Host -ForegroundColor Green "`nScan completed and saved to $previousScanFile."
+# Display results
+$currentDevices | Format-Table -AutoSize
+Write-Output "New devices since last scan:"
+Get-Content $newDevicesFile
