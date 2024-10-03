@@ -1,78 +1,93 @@
-Import-Module ActiveDirectory
+<#
+.SYNOPSIS
+This script retrieves the members of a specified local security group on a specified server and allows the user to remove a security group from the server.
+.DESCRIPTION
+This script prompts the user to enter a server name and select a local security group 
+(1 for "Administrators" or 2 for "Remote Desktop Users"), and then retrieves the members of the specified group on the specified server using the WinNT provider.
+It also allows the user to remove an existing security group from the specified local security group on the server.
+.PARAMETER ServerName
+Specifies the name of the server to retrieve group members from.
+.PARAMETER GroupName
+Specifies the name of the local security group to retrieve members from.
+#>
 
-# Prompt user to list the AD group
-cls
-$activeDirectoryGroup = Read-Host "Enter the Active Directory group to remove from the server"
+# Clear the screen
+Clear-Host
 
-# Prompt user to list the local group
-$serverGroup = Read-Host "Enter the local group that the Active Directory group needs to be removed from"
+# Prompt the user for the server name
+Write-Host "Please enter the following information:"
+$serverName = Read-Host "Enter server name"
 
-# Prompt user for server search criteria
-$serverSearch = Read-Host "Enter the server pattern to search for/update"
+# Display group options and get selection
+Write-Host "Select a local security group: "
+Write-Host "1. Administrators"
+Write-Host "2. Remote Desktop Users"
+$groupSelection = Read-Host "Enter the number for the group (1 or 2)"
 
-# Get the list of servers that match the pattern
-$servers = Get-ADComputer -Filter "Name -like '*$serverSearch*'" | select -Property Name
-
-# Have user confirm changes
-Write-Host "Servers targets:"
-Write-Host "$($servers.name)"
-$confirmation = Read-Host "Update membership on the following servers? [y/n]"
-if ($confirmation -ne 'y') {
-    Write-Host "Operation not confirmed, exiting"
-    Sleep -Seconds 5
-    Exit
+# Map the selection to a group name
+switch ($groupSelection) {
+    "1" { $groupName = "Administrators" }
+    "2" { $groupName = "Remote Desktop Users" }
+    Default {
+        Write-Host "Invalid selection. Please enter 1 or 2."
+        exit
+    }
 }
 
-foreach ($server in $servers.name) {
-    if (!(Test-Connection $server -Count 1 -Quiet)) {
-        Write-Host "$($server): Offline"
-        Continue
-    }
+# Retrieve the group members
+Write-Host " "
+Write-Host "Gathering information, please wait..."
+Write-Host " "
+$group = [ADSI]("WinNT://$serverName/$groupName,group")
+$groupMembers = $group.Members() | ForEach-Object {
+    $_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null)
+}
 
-    # Get the list of members currently in the local group
-    $serverGroupMembers = Invoke-Command -ComputerName $server -ScriptBlock { Get-LocalGroupMember -Group $using:serverGroup }
-
-    if ($serverGroupMembers.name -notcontains "SFI\$activeDirectoryGroup") {
-        Write-Host "$($server): $activeDirectoryGroup is not a member of $serverGroup"
-        Continue
-    }
-
-    # Get current list of group members
-    Write-Host "Server: $($server)"
+# Display the results
+if ($groupMembers) {
     Write-Host " "
-    Write-Host "Current Group Members: $($serverGroupMembers)"
-    Write-Host " "
-    Write-Host "Removing group $activeDirectoryGroup from $serverGroup"
-    Write-Host " "
+    Write-Host "The members of the $groupName group on $serverName are:"
+    $groupMembers
+} else {
+    Write-Host "The $groupName group on $serverName has no members."
+}
 
-    # Remove the AD group from the local server group on the current server
-    Invoke-Command -ComputerName $server -ScriptBlock {
-        try {
-            Remove-LocalGroupMember -Group $using:serverGroup -Member $using:activeDirectoryGroup -ErrorAction Stop
-        } catch {
-            if ([string]$_.Exception.ErrorCategory -contains "ObjectNotFound") {
-                Write-Host "$using:activeDirectoryGroup not found in $using:serverGroup on $($server)"
-                Continue
-            } else {
-                Write-Host $_.Exception
-                Continue
-            }
+# Prompt the user to remove a security group from the server
+$removeGroup = Read-Host "Do you want to remove an existing security group from the server? (Y/N)"
+if ($removeGroup -eq "Y") {
+    $adGroup = Read-Host "Enter the name of the Active Directory group to remove"
+
+    # Prompt for group name with selection
+    Write-Host "Select a local security group to remove the Active Directory group from: "
+    Write-Host "1. Administrators"
+    Write-Host "2. Remote Desktop Users"
+    $localGroupSelection = Read-Host "Enter the number for the group (1 or 2)"
+
+    switch ($localGroupSelection) {
+        "1" { $localGroup = "Administrators" }
+        "2" { $localGroup = "Remote Desktop Users" }
+        Default {
+            Write-Host "Invalid selection. Please enter 1 or 2."
+            exit
         }
     }
 
-    # Get the updated group list
-    $newserverGroup = Invoke-Command -ComputerName $server -ScriptBlock { Get-LocalGroupMember -Group $using:serverGroup }
-    # Print the server name and the groups it is a member of
-    if ($newserverGroup.name -notcontains "SFI\$activeDirectoryGroup") {
-        Write-Host " "
-        Write-Host "Process Completed Successfully!"
-        Write-Host " "
-        Write-Host " "
-        Write-Host "Server: $($server)"
-        Write-Host "Groups: $($newserverGroup)"
-        Write-Host " "
-    } else {
-        Write-Host "Process Failed on $($server)"
-        Write-Host " "
+    # Remove the Active Directory group from the local security group
+    $localGroupObj = [ADSI]("WinNT://$serverName/$localGroup,group")
+    try {
+        $localGroupObj.Remove("WinNT://$adGroup,group")
+        Write-Host "$adGroup has been removed from the $localGroup group on $serverName."
+    } catch {
+        Write-Host "Error: Could not remove $adGroup from $localGroup on $serverName."
     }
+
+    # Retrieve the updated group members
+    $groupMembers = $localGroupObj.Members() | ForEach-Object {
+        $_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null)
+    }
+
+    # Display the updated group members
+    Write-Host " "
+    Write-Host "The members of the $localGroup group on $serverName are now:"
+    $groupMembers
 }
